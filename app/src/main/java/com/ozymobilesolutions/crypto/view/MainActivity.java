@@ -3,6 +3,10 @@ package com.ozymobilesolutions.crypto.view;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import io.reactivex.Scheduler;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.schedulers.Schedulers;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -92,6 +96,9 @@ public class MainActivity extends AppCompatActivity {
     private String BASE_URL = "https://api.nomics.com/v1/";
     Retrofit retrofit;
 
+    //RxJava
+    CompositeDisposable compositeDisposable; // it is using the clear data when we dont need.
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -123,7 +130,11 @@ public class MainActivity extends AppCompatActivity {
 
         CryptoAPI cryptoAPI = retrofit.create(CryptoAPI.class);
 
+        //RxJava Dönüşümünden dolayı call yapısını kullanmıyoruz.
+
+        /*
         Call<List<CryptoModel>> call = cryptoAPI.getData();
+
 
         //asny. operation
         call.enqueue(new Callback<List<CryptoModel>>() {
@@ -139,13 +150,9 @@ public class MainActivity extends AppCompatActivity {
                     recyclerView.setAdapter(recyclerViewAdapter);
 
 
-                    for (CryptoModel cryptoModel: cryptoModels) {
-                        System.out.println(cryptoModel.currency +" - " + cryptoModel.price  );
-                    }
-
-
-
-
+                    //for (CryptoModel cryptoModel: cryptoModels) {#
+                    //    System.out.println(cryptoModel.currency +" - " + cryptoModel.price  );
+                    //}
 
                 }
 
@@ -156,7 +163,30 @@ public class MainActivity extends AppCompatActivity {
                 t.printStackTrace();
             }
         });
+
+        */
+
+        //RxJava
+        compositeDisposable = new CompositeDisposable();
+        compositeDisposable.add(cryptoAPI.getData()
+        .subscribeOn(Schedulers.io())
+        .observeOn(AndroidSchedulers.mainThread())
+        .subscribe(this::handleResponse));
+
+
+
+
     }
 
+    private void handleResponse(List<CryptoModel> cryptoModelList){
+
+        cryptoModels = new ArrayList<>(cryptoModelList);
+
+        //Recyclerview operations
+        recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+        recyclerViewAdapter = new RecyclerViewAdapter(cryptoModels);
+        recyclerView.setAdapter(recyclerViewAdapter);
+
+    }
 
 }
